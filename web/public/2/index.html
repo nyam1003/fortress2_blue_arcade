@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SDL3 Example: audio/03-load-wav</title>
+    <link rel="icon" href="/SDL3/thumbnail.png" type="image/png" />
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="SDL3 Example: audio/03-load-wav">
+    <meta property="og:description" content="If you're running this in a web browser, you need to click the window before you'll hear anything! 
+<br/>
+<br/>
+This example code creates a simple audio stream for playing sound, and loads a .wav file that is pushed through the stream in a loop.">
+    <meta property="og:image" content="/SDL3/audio/thumbnail.png" />
+
+    <link rel="stylesheet" type="text/css" href="/SDL3/examples.css" />
+    <style>
+      main {
+        display: flex;
+      }
+
+      main > #sidebar {
+        flex: 0 1 25%;
+        border-left: 2px solid #efefef;
+        padding: 1rem 1rem;
+      }
+
+      main > #content {
+        flex: 1 1 auto;
+        margin-bottom: 16px;
+      }
+
+      main > #content > h1 {
+        margin-top: 0;
+      }
+
+      main > #sidebar ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      main > #sidebar li {
+        padding: 2px 0;
+      }
+
+      #example-description {
+        max-width: 85ch;
+        margin-bottom: 16px;
+      }
+
+      .canvas-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #canvas {
+        max-width: 100%;
+        box-shadow: 0 0 0.5rem #7787;
+      }
+
+      #output-container {
+        position: fixed;
+        top: 100%;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        background-color: black;
+        border: none;
+        border-top: 1px solid #778;
+        margin: 0;
+        padding: 1rem;
+
+        transition: top 0.25s;
+      }
+
+      #output-container::before {
+        position: absolute;
+        bottom: 100%;
+        right: 1rem;
+
+        content: 'Console';
+        font-size: 1.5rem;
+        color: white;
+        background: black;
+        border: 1px solid #778;
+        border-bottom: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+      }
+
+      #output-container:hover,
+      #output-container:focus-within {
+        top: 50%;
+      }
+
+      #output-container:focus-within {
+        border-top: 2px solid orange;
+      }
+
+      #output-container:focus-within::before {
+        border: 2px solid orange;
+        border-bottom: none;
+      }
+
+      #output {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+
+        border: none;
+        background: black;
+        color: white;
+        outline: none;
+        resize: none;
+
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+      }
+
+      #source-code {
+        position: fixed;
+        top: 100%;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        background: #e0eaee;
+        padding: 1rem;
+
+        transition: top 0.25s;
+      }
+
+      #source-code::before {
+        position: absolute;
+        bottom: 100%;
+        left: 1rem;
+
+        content: 'Source code';
+        font-size: 1.5rem;
+        background: linear-gradient(to bottom, #789, #e0eaee);
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+
+        /* Used for a hack to avoid tab labels showing on top of tabs; see
+           comment below for details. */
+        transition: bottom 0.25s;
+      }
+
+      #source-code:hover,
+      #source-code:focus-within {
+        top: 50%;
+      }
+
+      #source-code:focus-within {
+        border-top: 2px solid orange;
+      }
+
+      #source-code:focus-within::before {
+        border: 2px solid orange;
+        border-bottom: none;
+      }
+
+      #source-code-contents {
+        height: 100%;
+        overflow: scroll;
+      }
+
+      /* Hack: Sinze z-index only goes one way, and both tab labels should be
+         behind each other's tab, put the former on top (higher z-index) and
+         make the latter one disappear when the former is hovered. */
+      #output-container:hover ~ #source-code::before,
+      #output-container:focus-within ~ #source-code::before {
+        bottom: -100%;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        main > #sidebar {
+          border-color: rgba(48, 54, 61, 0.7);
+        }
+      }
+
+      @media only screen and (max-width: 992px) {
+        main {
+          flex-direction: column;
+        }
+
+        main > #sidebar {
+          border: none;
+        }
+      }
+    </style>
+    <link rel="stylesheet" type="text/css" href="highlight.css">
+  </head>
+  <body>
+    <header>
+      <a href="/">SDL Examples</a>
+    </header>
+    <main>
+      <div id="content">
+        <nav class="breadcrumb">
+          <ul>
+            <li><a href="/SDL3">SDL3</a></li>
+            <li><a href="/SDL3/audio">audio</a></li>
+            <li><a href="/SDL3/audio/03-load-wav">03-load-wav</a></li>
+          </ul>
+        </nav>
+        <hr/>
+        <div id="example-description">If you're running this in a web browser, you need to click the window before you'll hear anything! 
+<br/>
+<br/>
+This example code creates a simple audio stream for playing sound, and loads a .wav file that is pushed through the stream in a loop.</div>
+        <div class="canvas-container">
+          <canvas
+            id="canvas"
+            oncontextmenu="event.preventDefault()"
+            tabindex="-1"
+          ></canvas>
+        </div>
+      </div>
+      <div id="sidebar">
+        <h3>Other examples:</h3>
+        <ul><li><a href='/SDL3/audio/01-simple-playback'>audio/01-simple-playback</a></li><li><a href='/SDL3/audio/02-simple-playback-callback'>audio/02-simple-playback-callback</a></li><li><a href='/SDL3/audio/03-load-wav'>audio/03-load-wav</a></li><li><a href='/SDL3/audio/04-multiple-streams'>audio/04-multiple-streams</a></li></ul>
+      </div>
+    </main>
+
+    <div id="output-container">
+      <textarea id="output" rows="8" spellcheck="false" readonly></textarea>
+    </div>
+
+    <div id="source-code" tabindex="1">
+      <div id="source-code-contents"><pre class="hl"><span class="hl com">/* load-wav.c ... */</span>
+
+<span class="hl com">/*</span>
+<span class="hl com"> * This example code creates a simple audio stream for playing sound, and</span>
+<span class="hl com"> * loads a .wav file that is pushed through the stream in a loop.</span>
+<span class="hl com"> *</span>
+<span class="hl com"> * This code is public domain. Feel free to use it for any purpose!</span>
+<span class="hl com"> *</span>
+<span class="hl com"> * The .wav file is a sample from Will Provost&#39;s song, The Living Proof,</span>
+<span class="hl com"> * used with permission.</span>
+<span class="hl com"> *</span>
+<span class="hl com"> *    From the album The Living Proof</span>
+<span class="hl com"> *    Publisher: 5 Guys Named Will</span>
+<span class="hl com"> *    Copyright 1996 Will Provost</span>
+<span class="hl com"> *    https://itunes.apple.com/us/album/the-living-proof/id4153978</span>
+<span class="hl com"> *    http://www.amazon.com/The-Living-Proof-Will-Provost/dp/B00004R8RH</span>
+<span class="hl com"> */</span>
+
+<span class="hl ppc">#define <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_MAIN_USE_CALLBACKS">SDL_MAIN_USE_CALLBACKS</a> 1</span>  <span class="hl com">/* use the callbacks instead of main() */</span><span class="hl ppc"></span>
+<span class="hl ppc">#include &lt;SDL3/SDL.h&gt;</span>
+<span class="hl ppc">#include &lt;SDL3/<a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_main">SDL_main</a>.h&gt;</span>
+
+<span class="hl com">/* We will use this renderer to draw into this window every frame. */</span>
+<span class="hl kwb">static</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_Window">SDL_Window</a> <span class="hl opt">*</span>window <span class="hl opt">=</span> NULL<span class="hl opt">;</span>
+<span class="hl kwb">static</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_Renderer">SDL_Renderer</a> <span class="hl opt">*</span>renderer <span class="hl opt">=</span> NULL<span class="hl opt">;</span>
+<span class="hl kwb">static</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AudioStream">SDL_AudioStream</a> <span class="hl opt">*</span>stream <span class="hl opt">=</span> NULL<span class="hl opt">;</span>
+<span class="hl kwb">static</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/Uint8">Uint8</a> <span class="hl opt">*</span>wav_data <span class="hl opt">=</span> NULL<span class="hl opt">;</span>
+<span class="hl kwb">static</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/Uint32">Uint32</a> wav_data_len <span class="hl opt">=</span> <span class="hl num">0</span><span class="hl opt">;</span>
+
+<span class="hl com">/* This function runs once at startup. */</span>
+<a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AppResult">SDL_AppResult</a> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AppInit">SDL_AppInit</a></span><span class="hl opt">(</span><span class="hl kwb">void</span> <span class="hl opt">**</span>appstate<span class="hl opt">,</span> <span class="hl kwb">int</span> argc<span class="hl opt">,</span> <span class="hl kwb">char</span> <span class="hl opt">*</span>argv<span class="hl opt">[])</span>
+<span class="hl opt">{</span>
+    <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AudioSpec">SDL_AudioSpec</a> spec<span class="hl opt">;</span>
+    <span class="hl kwb">char</span> <span class="hl opt">*</span>wav_path <span class="hl opt">=</span> NULL<span class="hl opt">;</span>
+
+    <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_SetAppMetadata">SDL_SetAppMetadata</a></span><span class="hl opt">(</span><span class="hl sng">&quot;Example Audio Load Wave&quot;</span><span class="hl opt">,</span> <span class="hl sng">&quot;1.0&quot;</span><span class="hl opt">,</span> <span class="hl sng">&quot;com.example.audio-load-wav&quot;</span><span class="hl opt">);</span>
+
+    <span class="hl kwa">if</span> <span class="hl opt">(!</span><span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_Init">SDL_Init</a></span><span class="hl opt">(</span><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_INIT_VIDEO">SDL_INIT_VIDEO</a> <span class="hl opt">|</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_INIT_AUDIO">SDL_INIT_AUDIO</a><span class="hl opt">)) {</span>
+        <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_Log">SDL_Log</a></span><span class="hl opt">(</span><span class="hl sng">&quot;Couldn&#39;t initialize SDL:</span> <span class="hl ipl">%s</span><span class="hl sng">&quot;</span><span class="hl opt">,</span> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_GetError">SDL_GetError</a></span><span class="hl opt">());</span>
+        <span class="hl kwa">return</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_APP_FAILURE">SDL_APP_FAILURE</a><span class="hl opt">;</span>
+    <span class="hl opt">}</span>
+
+    <span class="hl com">/* we don&#39;t _need_ a window for audio-only things but it&#39;s good policy to have one. */</span>
+    <span class="hl kwa">if</span> <span class="hl opt">(!</span><span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_CreateWindowAndRenderer">SDL_CreateWindowAndRenderer</a></span><span class="hl opt">(</span><span class="hl sng">&quot;examples/audio/load-wav&quot;</span><span class="hl opt">,</span> <span class="hl num">640</span><span class="hl opt">,</span> <span class="hl num">480</span><span class="hl opt">,</span> <span class="hl num">0</span><span class="hl opt">, &amp;</span>window<span class="hl opt">, &amp;</span>renderer<span class="hl opt">)) {</span>
+        <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_Log">SDL_Log</a></span><span class="hl opt">(</span><span class="hl sng">&quot;Couldn&#39;t create window/renderer:</span> <span class="hl ipl">%s</span><span class="hl sng">&quot;</span><span class="hl opt">,</span> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_GetError">SDL_GetError</a></span><span class="hl opt">());</span>
+        <span class="hl kwa">return</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_APP_FAILURE">SDL_APP_FAILURE</a><span class="hl opt">;</span>
+    <span class="hl opt">}</span>
+
+    <span class="hl com">/* Load the .wav file from wherever the app is being run from. */</span>
+    <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_asprintf">SDL_asprintf</a></span><span class="hl opt">(&amp;</span>wav_path<span class="hl opt">,</span> <span class="hl sng">&quot;</span><span class="hl ipl">%s</span><span class="hl sng">sample.wav&quot;</span><span class="hl opt">,</span> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_GetBasePath">SDL_GetBasePath</a></span><span class="hl opt">());</span>  <span class="hl com">/* allocate a string of the full file path */</span>
+    <span class="hl kwa">if</span> <span class="hl opt">(!</span><span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_LoadWAV">SDL_LoadWAV</a></span><span class="hl opt">(</span>wav_path<span class="hl opt">, &amp;</span>spec<span class="hl opt">, &amp;</span>wav_data<span class="hl opt">, &amp;</span>wav_data_len<span class="hl opt">)) {</span>
+        <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_Log">SDL_Log</a></span><span class="hl opt">(</span><span class="hl sng">&quot;Couldn&#39;t load .wav file:</span> <span class="hl ipl">%s</span><span class="hl sng">&quot;</span><span class="hl opt">,</span> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_GetError">SDL_GetError</a></span><span class="hl opt">());</span>
+        <span class="hl kwa">return</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_APP_FAILURE">SDL_APP_FAILURE</a><span class="hl opt">;</span>
+    <span class="hl opt">}</span>
+
+    <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_free">SDL_free</a></span><span class="hl opt">(</span>wav_path<span class="hl opt">);</span>  <span class="hl com">/* done with this string. */</span>
+
+    <span class="hl com">/* Create our audio stream in the same format as the .wav file. It&#39;ll convert to what the audio hardware wants. */</span>
+    stream <span class="hl opt">=</span> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_OpenAudioDeviceStream">SDL_OpenAudioDeviceStream</a></span><span class="hl opt">(</span><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK">SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK</a><span class="hl opt">, &amp;</span>spec<span class="hl opt">,</span> NULL<span class="hl opt">,</span> NULL<span class="hl opt">);</span>
+    <span class="hl kwa">if</span> <span class="hl opt">(!</span>stream<span class="hl opt">) {</span>
+        <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_Log">SDL_Log</a></span><span class="hl opt">(</span><span class="hl sng">&quot;Couldn&#39;t create audio stream:</span> <span class="hl ipl">%s</span><span class="hl sng">&quot;</span><span class="hl opt">,</span> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_GetError">SDL_GetError</a></span><span class="hl opt">());</span>
+        <span class="hl kwa">return</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_APP_FAILURE">SDL_APP_FAILURE</a><span class="hl opt">;</span>
+    <span class="hl opt">}</span>
+
+    <span class="hl com">/* SDL_OpenAudioDeviceStream starts the device paused. You have to tell it to start! */</span>
+    <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_ResumeAudioStreamDevice">SDL_ResumeAudioStreamDevice</a></span><span class="hl opt">(</span>stream<span class="hl opt">);</span>
+
+    <span class="hl kwa">return</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_APP_CONTINUE">SDL_APP_CONTINUE</a><span class="hl opt">;</span>  <span class="hl com">/* carry on with the program! */</span>
+<span class="hl opt">}</span>
+
+<span class="hl com">/* This function runs when a new event (mouse input, keypresses, etc) occurs. */</span>
+<a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AppResult">SDL_AppResult</a> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AppEvent">SDL_AppEvent</a></span><span class="hl opt">(</span><span class="hl kwb">void</span> <span class="hl opt">*</span>appstate<span class="hl opt">,</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_Event">SDL_Event</a> <span class="hl opt">*</span>event<span class="hl opt">)</span>
+<span class="hl opt">{</span>
+    <span class="hl kwa">if</span> <span class="hl opt">(</span>event<span class="hl opt">-&gt;</span>type <span class="hl opt">==</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_EVENT_QUIT">SDL_EVENT_QUIT</a><span class="hl opt">) {</span>
+        <span class="hl kwa">return</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_APP_SUCCESS">SDL_APP_SUCCESS</a><span class="hl opt">;</span>  <span class="hl com">/* end the program, reporting success to the OS. */</span>
+    <span class="hl opt">}</span>
+    <span class="hl kwa">return</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_APP_CONTINUE">SDL_APP_CONTINUE</a><span class="hl opt">;</span>  <span class="hl com">/* carry on with the program! */</span>
+<span class="hl opt">}</span>
+
+<span class="hl com">/* This function runs once per frame, and is the heart of the program. */</span>
+<a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AppResult">SDL_AppResult</a> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AppIterate">SDL_AppIterate</a></span><span class="hl opt">(</span><span class="hl kwb">void</span> <span class="hl opt">*</span>appstate<span class="hl opt">)</span>
+<span class="hl opt">{</span>
+    <span class="hl com">/* see if we need to feed the audio stream more data yet.</span>
+<span class="hl com">       We&#39;re being lazy here, but if there&#39;s less than the entire wav file left to play,</span>
+<span class="hl com">       just shove a whole copy of it into the queue, so we always have _tons_ of</span>
+<span class="hl com">       data queued for playback. */</span>
+    <span class="hl kwa">if</span> <span class="hl opt">(</span><span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_GetAudioStreamQueued">SDL_GetAudioStreamQueued</a></span><span class="hl opt">(</span>stream<span class="hl opt">) &lt; (</span><span class="hl kwb">int</span><span class="hl opt">)</span>wav_data_len<span class="hl opt">) {</span>
+        <span class="hl com">/* feed more data to the stream. It will queue at the end, and trickle out as the hardware needs more data. */</span>
+        <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_PutAudioStreamData">SDL_PutAudioStreamData</a></span><span class="hl opt">(</span>stream<span class="hl opt">,</span> wav_data<span class="hl opt">,</span> wav_data_len<span class="hl opt">);</span>
+    <span class="hl opt">}</span>
+
+    <span class="hl com">/* we&#39;re not doing anything with the renderer, so just blank it out. */</span>
+    <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_RenderClear">SDL_RenderClear</a></span><span class="hl opt">(</span>renderer<span class="hl opt">);</span>
+    <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_RenderPresent">SDL_RenderPresent</a></span><span class="hl opt">(</span>renderer<span class="hl opt">);</span>
+
+    <span class="hl kwa">return</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_APP_CONTINUE">SDL_APP_CONTINUE</a><span class="hl opt">;</span>  <span class="hl com">/* carry on with the program! */</span>
+<span class="hl opt">}</span>
+
+<span class="hl com">/* This function runs once at shutdown. */</span>
+<span class="hl kwb">void</span> <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AppQuit">SDL_AppQuit</a></span><span class="hl opt">(</span><span class="hl kwb">void</span> <span class="hl opt">*</span>appstate<span class="hl opt">,</span> <a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_AppResult">SDL_AppResult</a> result<span class="hl opt">)</span>
+<span class="hl opt">{</span>
+    <span class="hl kwd"><a class="hl" target="new" href="https://wiki.libsdl.org/SDL3/SDL_free">SDL_free</a></span><span class="hl opt">(</span>wav_data<span class="hl opt">);</span>  <span class="hl com">/* strictly speaking, this isn&#39;t necessary because the process is ending, but it&#39;s good policy. */</span>
+    <span class="hl com">/* SDL will clean up the window/renderer for us. */</span>
+<span class="hl opt">}</span>
+
+
+
+
+</pre></div>
+    </div>
+
+    <script type='text/javascript'>
+      var Module = {
+        preRun: [],
+        postRun: [],
+        print: (function() {
+          var element = document.getElementById('output');
+          if (element) element.value = ''; // clear browser cache
+          return function(text) {
+            var elem = document.getElementById('output-container');
+            if (elem.style['top'] == '') {
+                elem.style['top'] = '50%';
+                setTimeout(function() { elem.style['top'] = ''; }, 3000);
+            }
+
+            if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+            // These replacements are necessary if you render to raw HTML
+            //text = text.replace(/&/g, "&amp;");
+            //text = text.replace(/</g, "&lt;");
+            //text = text.replace(/>/g, "&gt;");
+            //text = text.replace('\n', '<br>', 'g');
+            console.log(text);
+            if (element) {
+              element.value += text + "\n";
+              element.scrollTop = element.scrollHeight; // focus on bottom
+            }
+          };
+        })(),
+        printErr: function(text) { Module.print(text) },
+        canvas: (() => {
+          var canvas = document.getElementById('canvas');
+
+          // As a default initial behavior, pop up an alert when webgl context is lost. To make your
+          // application robust, you may want to override this behavior before shipping!
+          // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
+          canvas.addEventListener("webglcontextlost", (e) => { alert('WebGL context lost. You will need to reload the page.'); e.preventDefault(); }, false);
+
+          return canvas;
+        })(),
+        setStatus: (text) => {},
+        totalDependencies: 0,
+        monitorRunDependencies: (left) => {
+          this.totalDependencies = Math.max(this.totalDependencies, left);
+          Module.setStatus(left ? 'Preparing... (' + (this.totalDependencies-left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+        }
+      };
+      Module.setStatus('Downloading...');
+      window.onerror = (event) => {
+        // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+        Module.setStatus('Exception thrown, see JavaScript console');
+        Module.setStatus = (text) => {
+          if (text) console.error('[post-exception status] ' + text);
+        };
+      };
+    </script>
+    <script async type="text/javascript" src="audio-load-wav.js"></script>
+  </body>
+</html>
+
+
